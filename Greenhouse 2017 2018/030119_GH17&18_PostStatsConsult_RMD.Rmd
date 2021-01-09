@@ -1,0 +1,909 @@
+---
+title: "030119_GH17&18Analysis_PostStatsConsult"
+author: "Kelsey Fisher"
+date: "March 1, 2019"
+output: word_document
+---
+
+```{r}
+##work directory
+setwd("C:/Users/kefisher/Box Sync/Publications/Monarch Larval Biomass Consumption - GH 2017 & 2018/Analysis_022019")
+##home directory
+#setwd("C:/Users/Kelsey/Box/Publications/Monarch Larval Biomass Consumption - GH 2017 & 2018/Analysis_022019")
+
+library(ggplot2)
+library(emmeans)
+```
+
+#############################################################################################################
+###                                            2017 & 2018 Data                                           ###
+#############################################################################################################
+
+##########################################
+### Days Until Natal Plant Abandonment ###
+##########################################
+```{r}
+Natal<-read.csv("011819_GH17&18_Abandonment.csv")
+
+Natal$Trial=factor(Natal$Trial)
+Natal$Block=factor(Natal$Block)
+Natal$NumPlants=factor(Natal$NumPlants)
+Natal$Year=factor(Natal$Year)
+# Create Year-Block variable with 12 levels
+Natal$YearBlock <- as.numeric(as.factor(paste(Natal$Year, Natal$Block, sep = "-")))
+Natal$YearBlock <- as.factor(Natal$YearBlock)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+daystomove <- glm(DaysToMove ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=Natal, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(daystomove)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(daystomove, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(daystomove), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(daystomove), df.residual(daystomove), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(daystomove)$deviance/summary(daystomove)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(daystomove, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(Natal,~NumPlants,summarise,mean=mean(DaysToMove),sd=sd(DaysToMove))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEDays<- summarySE(Natal, measurevar="DaysToMove", groupvars=c("NumPlants"))
+SEDays
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEDays, aes(x=NumPlants, y=DaysToMove, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Days Until Natal Plant Abandonment")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=DaysToMove-sd, ymax=DaysToMove+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,10.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+Days=Natal$DaysToMove
+mean(Days)
+sd(Days)
+max(Days)
+min(Days)
+```
+
+###################################
+### Instar at Natal Abandonment ###
+###################################
+
+#Poisson glm
+```{r}
+# Poisson glm
+instar <- glm(InstarToMove ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=Natal, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(instar)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(instar, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(instar), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(instar), df.residual(instar), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(instar)$deviance/summary(instar)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(instar, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(Natal,~NumPlants,summarise,mean=mean(InstarToMove),sd=sd(InstarToMove))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEInstar<- summarySE(Natal, measurevar="InstarToMove", groupvars=c("NumPlants"))
+SEInstar
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEInstar, aes(x=NumPlants, y=InstarToMove, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Instar at Natal Plant Abandonment")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=InstarToMove-sd, ymax=InstarToMove+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,5.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+Instar=Natal$InstarToMove
+mean(Instar)
+sd(Instar)
+max(Instar)
+min(Instar)
+```
+
+```{r}
+getmode <- function(Instar) {
+  uniqv <- unique(Instar)
+  uniqv[which.max(tabulate(match(Instar, uniqv)))]
+}
+
+result<-getmode(Instar)
+print(result)
+```
+
+
+#################################
+### Plant Rank at Abandonment ###
+#################################
+
+```{r}
+
+Rank<-read.csv("011819_GH18_PlantRank_NatalAbandonment.csv")
+
+```
+
+```{r}
+head(Rank)
+```
+
+```{r}
+Rank$Trial=factor(Rank$Trial)
+Rank$Block=factor(Rank$Block)
+Rank$NumPlants=factor(Rank$NumPlants)
+Rank$Year=factor(Rank$Year)
+# Create Year-Block variable with 12 levels
+Rank$YearBlock <- as.numeric(as.factor(paste(Rank$Year, Rank$Block, sep = "-")))
+Rank$YearBlock <- as.factor(Rank$YearBlock)
+```
+
+```{r}
+# Poisson glm
+rank <- glm(PlantRank ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=Rank, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(rank)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(rank, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(rank), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(rank), df.residual(rank), lower.tail = F)
+```
+
+```{r}
+#Test for overdispersion
+summary(rank)$deviance/summary(rank)$df.residual
+### 1.27 is overdispersed....
+```
+
+#############################################################################################################
+###                                             Only 2017 Data                                            ###
+#############################################################################################################
+
+########################
+### Days to Pupation ###
+########################
+
+```{r}
+
+GH17<- read.csv("012119_GH2017_ForAnalysis.csv")
+```
+
+```{r}
+head(GH17)
+```
+
+```{r}
+GH17$Trial=factor(GH17$Trial)
+GH17$Block=factor(GH17$Block)
+GH17$NumPlants=factor(GH17$NumPlants)
+GH17$Year=factor(GH17$Year)
+# Create Year-Block variable with 12 levels
+GH17$YearBlock <- as.numeric(as.factor(paste(GH17$Year, GH17$Block, sep = "-")))
+GH17$YearBlock <- as.factor(GH17$YearBlock)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+pday <- glm(PDay ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=GH17, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(pday)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(pday, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(pday), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(pday), df.residual(pday), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(pday)$deviance/summary(pday)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(pday, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(GH17,~NumPlants,summarise,mean=mean(PDay),sd=sd(PDay))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEPDay<- summarySE(GH17, measurevar="PDay", groupvars=c("NumPlants"))
+SEPDay
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEPDay, aes(x=NumPlants, y=PDay, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Day of Pupal Formation")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=PDay-sd, ymax=PDay+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,15.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+PDay=GH17$PDay
+mean(PDay)
+sd(PDay)
+max(PDay)
+min(PDay)
+```
+
+```{r}
+getmode <- function(PDay) {
+  uniqv <- unique(PDay)
+  uniqv[which.max(tabulate(match(PDay, uniqv)))]
+}
+
+result<-getmode(PDay)
+print(result)
+```
+
+####################
+### Pupal Weight ###
+####################
+
+```{r}
+Weight<- read.csv("012119_GH2017_ForAnalysis_pweight.csv", header=TRUE)
+```
+
+```{r}
+Weight$Trial=factor(Weight$Trial)
+Weight$Block=factor(Weight$Block)
+Weight$NumPlants=factor(Weight$NumPlants)
+Weight$Year=factor(Weight$Year)
+# Create Year-Block variable with 12 levels
+Weight$YearBlock <- as.numeric(as.factor(paste(Weight$Year, Weight$Block, sep = "-")))
+Weight$YearBlock <- as.factor(Weight$YearBlock)
+Weight$PWeight <- as.numeric(Weight$PWeight)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+pweight <- glm(PWeight ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=Weight, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(pweight)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(pweight, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(pweight), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(pweight), df.residual(pweight), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(pweight)$deviance/summary(pweight)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(pweight, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(Weight,~NumPlants,summarise,mean=mean(PWeight),sd=sd(PWeight))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEPWeight<- summarySE(Weight, measurevar="PWeight", groupvars=c("NumPlants"))
+SEPWeight
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEPWeight, aes(x=NumPlants, y=PWeight, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Pupal Weight")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=PWeight-sd, ymax=PWeight+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,1.55))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+PWeight=Weight$PWeight
+mean(PWeight)
+sd(PWeight)
+max(PWeight)
+min(PWeight)
+```
+
+```{r}
+getmode <- function(PWeight) {
+  uniqv <- unique(PWeight)
+  uniqv[which.max(tabulate(match(PWeight, uniqv)))]
+}
+
+result<-getmode(PWeight)
+print(result)
+```
+
+
+######################
+### Pupal Duration ###
+######################
+
+```{r}
+PDur<- read.csv("012119_GH2017_ForPdur.csv", header=TRUE)
+```
+
+```{r}
+PDur$Trial=factor(PDur$Trial)
+PDur$Block=factor(PDur$Block)
+PDur$NumPlants=factor(PDur$NumPlants)
+PDur$Year=factor(PDur$Year)
+# Create Year-Block variable with 12 levels
+PDur$YearBlock <- as.numeric(as.factor(paste(PDur$Year, PDur$Block, sep = "-")))
+PDur$YearBlock <- as.factor(PDur$YearBlock)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+pdur <- glm(PDuration ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=PDur, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(pdur)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(pdur, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(pdur), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(pdur), df.residual(pdur), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(pdur)$deviance/summary(pdur)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(pdur, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(PDur,~NumPlants,summarise,mean=mean(PDuration),sd=sd(PDuration))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEPDur<- summarySE(PDur, measurevar="PDuration", groupvars=c("NumPlants"))
+SEPDur
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEPDur, aes(x=NumPlants, y=PDuration, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Pupal Duration (days)")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=PDuration-sd, ymax=PDuration+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,12.2))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+PDur2=PDur$PDuration
+mean(PDur2)
+sd(PDur2)
+max(PDur2)
+min(PDur2)
+```
+
+```{r}
+getmode <- function(PDur2) {
+  uniqv <- unique(PDur2)
+  uniqv[which.max(tabulate(match(PDur2, uniqv)))]
+}
+
+result<-getmode(PDur2)
+print(result)
+```
+
+################################
+### Neo to Adult Development ###
+################################
+
+```{r}
+head(PDur)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+neo <- glm(NeoToAdult ~ YearBlock + Trial + NumPlants + Trial:NumPlants, data=PDur, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(neo)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(neo, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(neo), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(neo), df.residual(neo), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(neo)$deviance/summary(neo)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(neo, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(PDur,~NumPlants,summarise,mean=mean(NeoToAdult),sd=sd(NeoToAdult))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEPDur<- summarySE(PDur, measurevar="NeoToAdult", groupvars=c("NumPlants"))
+SEPDur
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEPDur, aes(x=NumPlants, y=NeoToAdult, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Duration of Neonate to Adult Eclosion (days)")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=NeoToAdult-sd, ymax=NeoToAdult+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,25.4))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+Neo=PDur$NeoToAdult
+mean(Neo)
+sd(Neo)
+max(Neo)
+min(Neo)
+```
+
+```{r}
+getmode <- function(Neo) {
+  uniqv <- unique(Neo)
+  uniqv[which.max(tabulate(match(Neo, uniqv)))]
+}
+
+result<-getmode(Neo)
+print(result)
+```
+
+#############################################################################################################
+###                                             Only 2018 Data                                            ###
+#############################################################################################################
+
+```{r}
+Bio<-read.csv("012219_GH18_BiomassByInstar_NatalStem.csv", header=TRUE)
+```
+
+```{r}
+Bio$Trial=factor(Bio$Trial)
+Bio$Block=factor(Bio$Block)
+Bio$NumPlants=factor(Bio$NumPlants)
+Bio$Year=factor(Bio$Year)
+# Create Year-Block variable with 12 levels
+Bio$YearBlock <- as.numeric(as.factor(paste(Bio$Year, Bio$Block, sep = "-")))
+Bio$YearBlock <- as.factor(Bio$YearBlock)
+Bio$MoveInstar <- as.factor(Bio$MoveInstar)
+Bio$Biomass <- as.numeric(Bio$Biomass)
+```
+
+```{r}
+head(Bio)
+```
+
+#Poisson glm
+```{r}
+# Poisson glm
+biomass <- glm(Biomass ~ YearBlock + Trial + NumPlants + MoveInstar + Trial:NumPlants, data=Bio, family = poisson(link = "log"))
+#not useful, just make sure there isn't a bunch of NA
+summary(biomass)
+```
+
+```{r}
+# Goodness of fit test with Resids
+Resids <- residuals(biomass, type = "pearson")
+#Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(biomass), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+```
+
+```{r}
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+```
+
+```{r}
+#Using deviance residuals
+#If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(biomass), df.residual(biomass), lower.tail = F)
+
+
+```
+
+```{r}
+#Test for overdispersion
+summary(pdur)$deviance/summary(pdur)$df.residual
+#0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm <- emmeans(pdur, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+```
+
+```{r}
+#average by number of plants
+library(plyr)
+ddply(PDur,~NumPlants,summarise,mean=mean(PDuration),sd=sd(PDuration))
+
+```
+
+```{r}
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEPDur<- summarySE(PDur, measurevar="PDuration", groupvars=c("NumPlants"))
+SEPDur
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEPDur, aes(x=NumPlants, y=PDuration, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Pupal Duration (days)")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=PDuration-sd, ymax=PDuration+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,12.2))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+PDur2=PDur$PDuration
+mean(PDur2)
+sd(PDur2)
+max(PDur2)
+min(PDur2)
+```
+
+```{r}
+getmode <- function(PDur2) {
+  uniqv <- unique(PDur2)
+  uniqv[which.max(tabulate(match(PDur2, uniqv)))]
+}
+
+result<-getmode(PDur2)
+print(result)
+```

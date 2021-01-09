@@ -1,0 +1,377 @@
+---
+title: "030619_GH17&18_PostStatsConsult_proportions"
+author: "Kelsey Fisher"
+date: "March 6, 2019"
+output: word_document
+---
+
+####################################
+### Proportion on plant material ###
+####################################
+
+
+```{r}
+GH1718<- read.csv("011819_GH2017&2018_FullDevelopment_ForAnalysis.csv")
+```
+
+```{r}
+GH1718$Trial=factor(GH1718$Trial)
+GH1718$Block=factor(GH1718$Block)
+GH1718$NumPlants=factor(GH1718$NumPlants)
+GH1718$Year=factor(GH1718$Year)
+GH1718$YearBlock <- as.numeric(as.factor(paste(GH1718$Year, GH1718$Block, sep = "-")))
+GH1718$YearBlock <- as.factor(GH1718$YearBlock)
+```
+
+```{r}
+#Reduce data frame
+GH1718.complete <- GH1718[which(GH1718$Trial == 1 | GH1718$Trial == 2 | GH1718$Trial == 3 | GH1718$Trial == 4),]
+nrow(GH1718)
+nrow(GH1718.complete)
+```
+
+```{r}
+relplant <- glm(RelPlant ~ NumPlants + Trial + Trial:NumPlants + YearBlock, data=GH1718.complete, family = binomial, na.action = "na.omit")
+#warning not error
+summary(relplant)
+```
+
+```{r}
+Resids <- residuals(relplant, type = "pearson")
+        #Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(relplant), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+
+#Using deviance residuals
+  #If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(relplant), df.residual(relplant), lower.tail = F)
+
+#Test for overdispersion
+summary(relplant)$deviance/summary(relplant)$df.residual
+  #0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+
+```{r}
+#Test for overdispersion
+summary(relplant)$deviance/summary(relplant)$df.residual
+#Way underdispersed - inference is very conservative
+
+```
+
+```{r}
+
+#Test for significance
+dtm.emm <- emmeans(relplant, c("NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+
+```
+
+```{r}
+
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SErp<- summarySE(GH1718.complete, measurevar="RelPlant", groupvars=c("NumPlants"))
+SErp
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(SErp, aes(x=NumPlants, y=RelPlant, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Number of Plants") +
+  ylab("Proportion of Time on Plant Material")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=RelPlant-sd, ymax=RelPlant+sd), width=.2,
+                position = position_dodge(.9))+
+  scale_y_continuous(expand=c(0,0), limits=c(0,1.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+```{r}
+#stats for manuscript
+relp=GH1718.complete$RelPlant
+length(relp)
+mean(relp)
+sd(relp)
+max(relp)
+min(relp)
+```
+
+
+
+
+##################################################
+### Portion of the plant (top, middle, bottom) ###
+##################################################
+```{r}
+loc<- read.csv("031319_LocationOnStem.csv",header=TRUE)
+```
+
+```{r}
+loc$Trial=factor(loc$Trial)
+loc$Block=factor(loc$Block)
+loc$NumPlants=factor(loc$NumPlants)
+loc$Year=factor(loc$Year)
+loc$YearBlock <- as.numeric(as.factor(paste(loc$Year, loc$Block, sep = "-")))
+loc$YearBlock <- as.factor(loc$YearBlock)
+```
+
+```{r}
+head(loc)
+```
+
+
+```{r}
+location <- glm(LocRelativeTime ~ Location + NumPlants + Trial + Trial:NumPlants + YearBlock, data=loc, family = binomial, na.action = "na.omit")
+#warning not error
+summary(location)
+```
+
+```{r}
+Resids <- residuals(location, type = "pearson")
+        #Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(location), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+
+#Using deviance residuals
+  #If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(location), df.residual(location), lower.tail = F)
+
+#Test for overdispersion
+summary(location)$deviance/summary(location)$df.residual
+  #0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+
+```{r}
+#Test for overdispersion
+summary(location)$deviance/summary(location)$df.residual
+#Way underdispersed - inference is very conservative
+
+```
+
+```{r}
+
+#Test for significance
+library(emmeans)
+dtm.emm <- emmeans(location, c("Location", "NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm2 <- emmeans(location, c("Location"), type='response')
+joint_tests(dtm.emm2)
+```
+
+```{r}
+pairs(dtm.emm2)
+```
+
+```{r}
+dtm.emm2
+```
+
+```{r}
+CLD(dtm.emm2)
+```
+
+```{r}
+
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEloc<- summarySE(loc, measurevar="LocRelativeTime", groupvars=c("Location"))
+SEloc$Sig<- NA
+SEloc$Sig<- c("a","b","c")
+SEloc
+write.csv(SEloc,"031319_SEloc_addloweSD.csv")
+```
+
+```{r}
+SEloc2<-read.csv("031319_SEloc_addloweSD.csv", header=TRUE)
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEloc2, aes(x=Location, y=LocRelativeTime, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Portion of Plant Stem") +
+  ylab("Relative Time")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=LocRelativeTime-sdL, ymax=LocRelativeTime+sdU), width=.2,
+                position = position_dodge(.9))+
+  geom_text(aes(label=Sig, y=LocRelativeTime+(sdU)),vjust=-1.5, size=8)+
+  scale_y_continuous(expand=c(0,0), limits=c(0,1.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+
+
+
+#######################################################
+### Portion of the leaf (top, under, new veg, stem) ###
+#######################################################
+```{r}
+sur<- read.csv("031319_LocationOnLeaf.csv",header=TRUE)
+```
+
+```{r}
+sur$Trial=factor(sur$Trial)
+sur$Block=factor(sur$Block)
+sur$NumPlants=factor(sur$NumPlants)
+sur$Year=factor(sur$Year)
+sur$YearBlock <- as.numeric(as.factor(paste(sur$Year, sur$Block, sep = "-")))
+sur$YearBlock <- as.factor(sur$YearBlock)
+```
+
+```{r}
+head(sur)
+```
+
+
+```{r}
+surface <- glm(SurRelativeTime ~ LeafSurf + NumPlants + Trial + Trial:NumPlants + YearBlock, data=sur, family = binomial, na.action = "na.omit")
+#warning not error
+summary(surface)
+```
+
+```{r}
+Resids <- residuals(surface, type = "pearson")
+        #Change "type" to "deviance" for deviance resids (get the same results)
+plot(fitted(surface), Resids,
+     xlab = "estimated mean",
+     ylab = "residual",
+     cex.lab = 1.4,
+     pch = 16, col = 4)
+abline(h = 0, lty = 2)  #Resids look okay
+
+hist(Resids, prob = T)
+lines(density(Resids), col='orange') #Should look like a standard normal - does
+
+#Using deviance residuals
+  #If the p-value is less than 0.05, you have a problem with model fit
+pchisq(deviance(surface), df.residual(surface), lower.tail = F)
+
+#Test for overdispersion
+summary(surface)$deviance/summary(surface)$df.residual
+  #0.82 underdispersed by a bit - that's okay (inference is conservative)
+
+```
+
+
+```{r}
+#Test for overdispersion
+summary(surface)$deviance/summary(surface)$df.residual
+#Way underdispersed - inference is very conservative
+
+```
+
+```{r}
+
+#Test for significance
+library(emmeans)
+dtm.emm <- emmeans(surface, c("LeafSurf", "NumPlants", "Trial", "YearBlock"), type='response')
+joint_tests(dtm.emm)
+
+```
+
+```{r}
+# Test for significance of NumPlants
+dtm.emm2 <- emmeans(surface, c("LeafSurf"), type='response')
+joint_tests(dtm.emm2)
+```
+
+```{r}
+pairs(dtm.emm2)
+```
+
+```{r}
+dtm.emm2
+```
+
+```{r}
+CLD(dtm.emm2)
+```
+
+```{r}
+
+#Graph for manuscript
+library(lattice)
+library(Rmisc)
+SEsur<- summarySE(sur, measurevar="SurRelativeTime", groupvars=c("LeafSurf"))
+SEsur$Sig<- NA
+SEsur$Sig<- c("a","c","a", "b")
+SEsur
+write.csv(SEsur,"031319_SEsur_addloweSD.csv")
+```
+
+```{r}
+SEsur2<-read.csv("031319_SEsur_addloweSD.csv", header=TRUE)
+```
+
+```{r}
+library(ggplot2)
+ggplot(SEsur2, aes(x=LeafSurf, y=SurRelativeTime, width=.6))+
+  geom_bar(stat="identity", color="black",
+           position=position_dodge())+
+  xlab("Portion of Leaf Surface") +
+  ylab("Relative Time")+
+  theme_bw()+
+  geom_errorbar(aes(ymin=SurRelativeTime-sdL, ymax=SurRelativeTime+sdU), width=.2,
+                position = position_dodge(.9))+
+  geom_text(aes(label=Sig, y=SurRelativeTime+(sdU)),vjust=-1.5, size=8)+
+  scale_y_continuous(expand=c(0,0), limits=c(0,1.1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size=16))+
+  theme(axis.text.x=element_text(colour="black"))+
+  theme(axis.text.y = element_text(size=16))+
+  theme(axis.text.y=element_text(colour="black"))+
+  theme(axis.title = element_text(size = 15))
+
+```
+
+
+
+
+
+
+
+
